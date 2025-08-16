@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspector - KHDA Inspection | Techno Group Originator</title>
+    <meta name="description" content="AI School Inspection Assistant for the KHDA Framework">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="assets/images/Techno-Logo.jpg">
+</head>
+<body>
+    <main class="inspector-main" id="inspector-app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-container">
+                <a href="index.html" class="logo-link">
+                    <div class="logo-container">
+                        <img src="assets/images/Techno-Logo.jpg" alt="Techno Group Originator" class="logo-image">
+                    </div>
+                    <div class="logo-text">
+                        <span class="company-name">Techno Group Originator</span>
+                        <span class="project-name">EAD Project</span>
+                    </div>
+                </a>
+
+                <div class="nav">
+                    <span class="badge badge-secondary">KHDA Inspection Framework</span>
+                    <a href="https://www.khda.gov.ae" target="_blank" rel="noreferrer" class="text-xs text-slate-500 hover:text-slate-700">
+                        Learn about KHDA
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="inspector-container">
+            <div class="inspector-notice">
+                Built by Techno Group Originator under the EAD project for KHDA-aligned AI inspection services.
+            </div>
+
+            <div class="inspector-grid">
+                <!-- Main Content Area -->
+                <div class="inspector-main-content">
+                    <!-- Step 1: Upload & Analyze -->
+                    <div class="card step-card">
+                        <div class="card-header">
+                            <div class="step-header">
+                                <svg class="icon-lg text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                    <polyline points="14,2 14,8 20,8"/>
+                                    <path d="M12 18v-6"/>
+                                    <path d="m9 15 3-3 3 3"/>
+                                </svg>
+                                <div>
+                                    <h2 class="step-title">Step 1: Upload & Analyze Document</h2>
+                                    <p class="step-description">
+                                        The document is analyzed to extract findings aligned
+                                        to the UAE's KHDA framework.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <form id="analyze-form" class="form">
+                                <div class="form-group">
+                                    <label for="file-input" class="label">Inspection document</label>
+                                    <input id="file-input" type="file" accept=".pdf,.doc,.docx,.txt" class="input" aria-describedby="file-help">
+                                    <p id="file-help" class="help-text">
+                                        Drag and drop or click to select. Max typical size supported by your backend.
+                                    </p>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="submit" id="analyze-btn" class="btn btn-default" disabled>
+                                        Analyze Document
+                                    </button>
+                                    <span id="file-selected" class="file-selected" style="display: none;"></span>
+                                </div>
+                            </form>
+
+                            <!-- Status Alert -->
+                            <div id="status-alert" class="alert" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Separator -->
+                    <div class="separator"></div>
+
+                    <!-- Step 2: Review Analysis & Generate Report -->
+                    <div class="card step-card">
+                        <div class="card-header">
+                            <div class="step-header">
+                                <svg class="icon-lg text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                    <polyline points="14,2 14,8 20,8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                    <polyline points="10,9 9,9 8,9"/>
+                                </svg>
+                                <div>
+                                    <h2 class="step-title">Step 2: Review Analysis & Generate Report</h2>
+                                    <p class="step-description">
+                                        Review the extracted insights and generate a formal inspection report PDF.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <!-- Analysis Display -->
+                            <div id="analysis-container" class="analysis-container" aria-live="polite">
+                                <p class="analysis-placeholder">
+                                    No analysis yet. Upload a document and click "Analyze Document" to see structured findings here.
+                                </p>
+                            </div>
+
+                            <!-- Generate Actions -->
+                            <div class="generate-actions">
+                                <button id="generate-btn" class="btn btn-success btn-lg" disabled>
+                                    Generate Inspection Report
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+                                        <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+                                        <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+                                        <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+                                    </svg>
+                                </button>
+
+                                <a id="download-btn" href="#" download class="btn-download" style="display: none;">
+                                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="7,10 12,15 17,10"/>
+                                        <line x1="12" y1="15" x2="12" y2="3"/>
+                                    </svg>
+                                    Download Report
+                                </a>
+                            </div>
+
+                            <p id="report-notice" class="report-notice" style="display: none;">
+                                Your report has been successfully generated. This may be a one-time download link, depending on backend policy.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <aside class="inspector-sidebar">
+                    <div class="card about-card">
+                        <div class="card-header">
+                            <h3 class="card-title">About this Prototype</h3>
+                            <p class="card-description">How it works</p>
+                        </div>
+                        <div class="about-content">
+                            <p>
+                                This tool analyzes your document and aligns insights to <strong>KHDA</strong> inspection criteria, then
+                                generates a formal PDF report.
+                            </p>
+                            <ul>
+                                <li>Keep your document content clear and structured</li>
+                                <li>Analysis and report generation may take up to a minute</li>
+                            </ul>
+                            <div class="about-separator"></div>
+                            <p class="about-footer">
+                                Built by <strong>Techno Group Originator</strong> under the <strong>EAD</strong> project, focused on
+                                AI inspection services for <strong>KHDA</strong>.
+                            </p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+        <!-- Partnership Section -->
+        <section class="partnership-section">
+            <div class="partnership-container">
+                <div class="partnership-header">
+                    <h3 class="partnership-title">Our Partners</h3>
+                    <p class="partnership-subtitle">Proudly working together to enhance education standards</p>
+                </div>
+                <div class="partnership-logos">
+                    <div class="partner-item">
+                        <div class="partner-logo">
+                            <img src="assets/images/Techno-Logo.jpg" alt="Techno Group Originator">
+                        </div>
+                        <span class="partner-name">Techno Group</span>
+                    </div>
+                    <div class="partner-item">
+                        <div class="partner-logo-wide">
+                            <img src="assets/images/EAD-Logo.png" alt="Emirates Authority for Development">
+                        </div>
+                        <span class="partner-name">EAD</span>
+                    </div>
+                    <div class="partner-item">
+                        <div class="partner-logo-wide">
+                            <img src="assets/images/Dubai-KHDA-Logo.png" alt="Knowledge and Human Development Authority" class="dubai-logo-filter">
+                        </div>
+                        <span class="partner-name">KHDA</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-container">
+                <p class="footer-text">
+                    Built by <strong>Techno Group Originator</strong> under the <strong>EAD</strong> project.
+                    Primary focus: <strong>KHDA</strong> framework and AI inspection services.
+                </p>
+                <p class="footer-copyright">© <span id="current-year"></span> Techno Group Originator. All rights reserved.</p>
+            </div>
+        </footer>
+    </main>
+
+    <script src="assets/js/main.js"></script>
+    <script>
+        // Set current year
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html> 
