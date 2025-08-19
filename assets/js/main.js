@@ -57,17 +57,24 @@ class KHDAInspectionApp {
 
         // Initialize inspector functionality
         this.setupInspectorApp();
+        this.setupWorkflowTabs();
+        this.populateWorkflowJSON();
     }
 
     setupInspectorApp() {
         // Inspector Page State
-        const state = {
-            file: null,
-            status: { message: "", type: null },
-            isBusy: false,
-            analysisText: "",
-            reportFile: ""
-        };
+        		const state = {
+			file: null,
+			status: { message: "", type: null },
+			isBusy: false,
+			analysisText: "",
+			reportFile: "",
+			agentTimer: null,
+			agentStartMs: 0,
+			agentInterval: null,
+			agentMessages: [],
+			agentCycleIndex: 0,
+		};
 
         // API Configuration
         const API_BASE_URL = "https://web-production-48e9c.up.railway.app/api/v1";
@@ -84,9 +91,35 @@ class KHDAInspectionApp {
         const statusAlert = document.getElementById('status-alert');
         const analysisContainer = document.getElementById('analysis-container');
         const fileSelectedSpan = document.getElementById('file-selected');
+        const agentRunner = document.getElementById('agent-runner');
+
+        // Ensure toast container exists
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container';
+            document.body.appendChild(toastContainer);
+        }
+
+        // Toast helper
+        const showToast = (title, message, type = 'info') => {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <div class="toast-title">${title || ''}</div>
+                <div class="toast-message">${message || ''}</div>
+            `;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        };
 
         // Utility Functions
         const updateButtonState = (button, isLoading, loadingText, defaultText) => {
+            if (!button) return;
             if (isLoading) {
                 button.disabled = true;
                 button.innerHTML = `
@@ -122,7 +155,7 @@ class KHDAInspectionApp {
             } else {
                 analysisContainer.innerHTML = `
                     <p class="analysis-placeholder">
-                        No analysis yet. Upload a document and click "Analyze Document" to see structured findings here.
+                        No analysis yet. Upload a document and click "Start Agent Analysis" to see structured findings here.
                     </p>
                 `;
             }
@@ -139,6 +172,56 @@ class KHDAInspectionApp {
             }
         };
 
+        // Agent Runner helpers - show only one agent: AnalysisAgent
+        		const renderAgentRunner = (messages = [], runningIndex = -1, markDone = false) => {
+			if (!agentRunner) return;
+			agentRunner.innerHTML = messages.map((msg, idx) => {
+				const isRunning = idx === runningIndex && !markDone;
+				const isDone = idx < runningIndex || markDone;
+				const stateClass = isDone ? 'done' : (isRunning ? 'running' : 'idle');
+				return `
+					<div class="agent-item ${stateClass}">
+						<span class="agent-dot"></span>
+						<span>${msg}</span>
+						${isRunning ? '<span class="text-slate-500">processing...</span>' : ''}
+					</div>
+				`;
+			}).join('');
+		};
+
+        const stopAgentRunner = () => {
+            if (state.agentTimer) clearTimeout(state.agentTimer);
+            state.agentTimer = null;
+            // Keep container visible; caller decides when to hide if needed
+        };
+
+        		const startAgentRunner = (cycleMs = 3000) => {
+			if (!agentRunner) return;
+			agentRunner.style.display = 'block';
+			state.agentStartMs = Date.now();
+			state.agentMessages = [
+				'Initializing AnalysisAgent',
+				'Parsing Evidence',
+				'Extracting KHDA-aligned Insights',
+				'Synthesizing Findings'
+			];
+			state.agentCycleIndex = 0;
+			renderAgentRunner(state.agentMessages, state.agentCycleIndex, false);
+			if (state.agentInterval) clearInterval(state.agentInterval);
+			state.agentInterval = setInterval(() => {
+				state.agentCycleIndex = Math.min(state.agentCycleIndex + 1, state.agentMessages.length - 1);
+				renderAgentRunner(state.agentMessages, state.agentCycleIndex, false);
+			}, cycleMs);
+		};
+
+        		const ensureMinAgentDuration = async (minMs = 5000) => {
+			const elapsed = Date.now() - state.agentStartMs;
+			if (elapsed < minMs) {
+				await new Promise(res => setTimeout(res, minMs - elapsed));
+			}
+			if (state.agentInterval) { clearInterval(state.agentInterval); state.agentInterval = null; }
+		};
+
         // File Input Handler
         if (fileInput) {
             fileInput.addEventListener('change', (e) => {
@@ -151,18 +234,21 @@ class KHDAInspectionApp {
                 showStatus("", null);
                 updateAnalysisDisplay("");
                 updateDownloadButton();
+                stopAgentRunner();
 
                 // Update UI
                 if (file) {
                     fileSelectedSpan.textContent = `Selected: ${file.name}`;
                     fileSelectedSpan.style.display = 'inline';
+                    analyzeBtn.style.display = 'inline-flex';
                     analyzeBtn.disabled = false;
                 } else {
                     fileSelectedSpan.style.display = 'none';
-                    analyzeBtn.disabled = true;
+                    analyzeBtn.style.display = 'none';
                 }
                 
                 generateBtn.disabled = true;
+                generateBtn.style.display = 'none';
             });
         }
 
@@ -172,13 +258,15 @@ class KHDAInspectionApp {
                 e.preventDefault();
                 
                 if (!state.file) {
-                    showStatus("Please select a file to analyze.", "error");
+                    const msg = "Please select a file to analyze.";
+                    showStatus(msg, "error");
+                    showToast("There was a problem", msg, 'error');
                     return;
                 }
 
                 state.isBusy = true;
-                showStatus("Analyzing document... This may take a moment.", "info");
-                updateButtonState(analyzeBtn, true, "Processing", "Analyze Document");
+                showStatus("Analysis agents are processing data... This may take a moment.", "info");
+                updateButtonState(analyzeBtn, true, "Processing", "Start Agent Analysis");
                 
                 state.analysisText = "";
                 state.reportFile = "";
@@ -204,14 +292,17 @@ class KHDAInspectionApp {
                     updateAnalysisDisplay(state.analysisText);
                     showStatus("", null);
                     
-                    // Enable generate button
+                    // Reveal Step-2 CTA
                     generateBtn.disabled = false;
+                    generateBtn.style.display = 'inline-flex';
 
                 } catch (error) {
-                    showStatus(`Error during analysis: ${error?.message || "Unknown error"}`, "error");
+                    const emsg = `Error during analysis: ${error?.message || "Unknown error"}`;
+                    showStatus(emsg, "error");
+                    showToast("There was a problem", emsg, 'error');
                 } finally {
                     state.isBusy = false;
-                    updateButtonState(analyzeBtn, false, "", "Analyze Document");
+                    updateButtonState(analyzeBtn, false, "", "Start Agent Analysis");
                 }
             });
         }
@@ -220,15 +311,20 @@ class KHDAInspectionApp {
         if (generateBtn) {
             generateBtn.addEventListener('click', async () => {
                 if (!state.analysisText) {
-                    showStatus("No analysis text available to generate a report.", "error");
+                    const msg = "No analysis text available to generate a report.";
+                    showStatus(msg, "error");
+                    showToast("There was a problem", msg, 'error');
                     return;
                 }
 
                 state.isBusy = true;
                 state.reportFile = "";
-                showStatus("Generating report with AI agents... This is a complex task and can take up to a minute.", "info");
-                updateButtonState(generateBtn, true, "Generating", "Generate Inspection Report");
+                showStatus("Starting agentic inspection workflow...", "info");
+                updateButtonState(generateBtn, true, "Running Workflow", "Step 2: Start Agentic Inspection Workflow");
                 updateDownloadButton();
+
+                // Start visual agent runner with minimum 5s display
+                startAgentRunner();
 
                 try {
                     const response = await fetch(REPORT_URL, {
@@ -247,21 +343,38 @@ class KHDAInspectionApp {
 
                     const filename = result?.report_filename;
                     state.reportFile = filename || "";
-                    updateDownloadButton();
+
+                    // Ensure at least 5s have elapsed before marking done
+                    					await ensureMinAgentDuration(5000);
+					renderAgentRunner(state.agentMessages, state.agentMessages.length - 1, true);
+					
+					updateDownloadButton();
                     showStatus("", null);
 
+                    // Success toast
+                    showToast("Inspection Report", "Inspection report generated. Please Download", 'success');
+
                 } catch (error) {
-                    showStatus(`Error generating report: ${error?.message || "Unknown error"}`, "error");
+                    // Ensure at least 5s runner for consistency
+                    					await ensureMinAgentDuration(5000);
+					renderAgentRunner(state.agentMessages, state.agentMessages.length - 1, false);
+					
+					const emsg = `Error generating report: ${error?.message || "Unknown error"}`;
+                    showStatus(emsg, "error");
+                    showToast("There was a problem", emsg, 'error');
                 } finally {
                     state.isBusy = false;
-                    updateButtonState(generateBtn, false, "", "Generate Inspection Report");
+                    updateButtonState(generateBtn, false, "", "Step 2: Start Agentic Inspection Workflow");
                 }
             });
         }
 
         // Initialize UI state
-        if (analyzeBtn) analyzeBtn.disabled = true;
-        if (generateBtn) generateBtn.disabled = true;
+        if (analyzeBtn) analyzeBtn.style.display = 'none';
+        if (generateBtn) {
+            generateBtn.disabled = true;
+            generateBtn.style.display = 'none';
+        }
         updateAnalysisDisplay("");
         updateDownloadButton();
     }
@@ -270,30 +383,64 @@ class KHDAInspectionApp {
     parseMarkdown(text) {
         return text
             // Headers
-            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/^### (.*$)/gim, '<h3>$1<\/h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1<\/h2>')
+            .replace(/^# (.*$)/gim, '<h1>$1<\/h1>')
             // Bold
-            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+            .replace(/\*\*(.*)\*\*/gim, '<strong>$1<\/strong>')
             // Italic
-            .replace(/\*(.*)\*/gim, '<em>$1</em>')
+            .replace(/\*(.*)\*/gim, '<em>$1<\/em>')
             // Code blocks
-            .replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>')
+            .replace(/```([\s\S]*?)```/gim, '<pre><code>$1<\/code><\/pre>')
             // Inline code
-            .replace(/`([^`]*)`/gim, '<code>$1</code>')
+            .replace(/`([^`]*)`/gim, '<code>$1<\/code>')
             // Lists
-            .replace(/^\* (.*$)/gim, '<li>$1</li>')
-            .replace(/^- (.*$)/gim, '<li>$1</li>')
+            .replace(/^\* (.*$)/gim, '<li>$1<\/li>')
+            .replace(/^- (.*$)/gim, '<li>$1<\/li>')
             // Line breaks
-            .replace(/\n\n/gim, '</p><p>')
+            .replace(/\n\n/gim, '<\/p><p>')
             .replace(/\n/gim, '<br>')
             // Wrap in paragraphs
-            .replace(/^(.*)$/gim, '<p>$1</p>')
+            .replace(/^(.*)$/gim, '<p>$1<\/p>')
             // Clean up list items
             .replace(/<p><li>/gim, '<ul><li>')
-            .replace(/<\/li><\/p>/gim, '</li></ul>')
+            .replace(/<\/li><\/p>/gim, '<\/li><\/ul>')
             // Clean up multiple paragraphs
-            .replace(/<\/p><p><\/p><p>/gim, '</p><p>');
+            .replace(/<\/p><p><\/p><p>/gim, '<\/p><p>');
+    }
+
+    // Workflow tabs and JSON prettifier
+    setupWorkflowTabs() {
+        const tabDiagram = document.getElementById('workflow-tab-diagram');
+        const tabJSON = document.getElementById('workflow-tab-json');
+        const diagram = document.getElementById('workflow-diagram');
+        const jsonPre = document.getElementById('workflow-json-pre');
+        if (!tabDiagram || !tabJSON || !diagram || !jsonPre) return;
+
+        tabDiagram.addEventListener('click', () => {
+            tabDiagram.classList.add('tab-active');
+            tabJSON.classList.remove('tab-active');
+            diagram.style.display = '';
+            jsonPre.style.display = 'none';
+        });
+        tabJSON.addEventListener('click', () => {
+            tabJSON.classList.add('tab-active');
+            tabDiagram.classList.remove('tab-active');
+            diagram.style.display = 'none';
+            jsonPre.style.display = '';
+        });
+    }
+
+    populateWorkflowJSON() {
+        const holder = document.getElementById('workflow-data');
+        const pre = document.getElementById('workflow-json-pre');
+        if (!holder || !pre) return;
+        try {
+            const obj = JSON.parse(holder.textContent || '{}');
+            pre.textContent = JSON.stringify(obj, null, 2);
+        } catch {
+            pre.textContent = holder.textContent || '';
+        }
     }
 }
 
