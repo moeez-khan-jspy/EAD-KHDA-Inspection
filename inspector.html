@@ -96,8 +96,6 @@
                             <p class="file-type-desc">Curricula, student reports, policies, and inspection documentation</p>
                             <div class="file-type-formats">
                                 <span class="format-tag">PDF</span>
-                                <span class="format-tag">DOC</span>
-                                <span class="format-tag">DOCX</span>
                             </div>
                         </div>
 
@@ -294,10 +292,10 @@
                         <div class="card-content">
                             <form id="analyze-form" class="form">
                                 <div class="form-group">
-                                    <label for="file-input" class="label">Choose Evidence File</label>
-                                    <input id="file-input" type="file" accept=".pdf,.doc,.docx,.txt,image/*,audio/*,video/*" class="input" aria-describedby="file-help">
+                                    <label for="file-input" class="label">Choose Evidence Files (up to 5)</label>
+                                    <input id="file-input" type="file" accept=".pdf,image/*,audio/*,video/*" multiple class="input" aria-describedby="file-help">
                                     <p id="file-help" class="help-text">
-                                        Upload any supported file type shown above. The system will automatically detect the content type and process accordingly.
+                                        Upload up to 5 files: PDF, images, audio, or video. The system will automatically detect the content type and process accordingly.
                                     </p>
                                 </div>
 
@@ -311,6 +309,7 @@
 
                             <!-- Status Alert -->
                             <div id="status-alert" class="alert" style="display: none;"></div>
+                            
                         </div>
                     </div>
 
@@ -380,23 +379,47 @@
                 <aside class="inspector-sidebar">
                     <div class="card about-card">
                         <div class="card-header">
-                            <h3 class="card-title">About this Demo</h3>
-                            <p class="card-description">Understanding the process</p>
+                            <h3 class="card-title">Sample Evidence</h3>
+                            <p class="card-description">Preview or download sample PDFs</p>
                         </div>
                         <div class="about-content">
-                            <p>
-                                This demonstration showcases an AI-powered inspection system that analyzes multiple evidence types and generates <strong>KHDA-compliant</strong> reports.
-                            </p>
-                            <ul>
-                                <li>Upload any supported evidence type</li>
-                                <li>AI agents process content in parallel</li>
-                                <li>Reports align with KHDA standards</li>
-                                <li>Complete workflow takes under 2 minutes</li>
+                            <ul class="sample-links">
+                                <li>
+                                    <span>Attendance Register (PDF)</span>
+                                    <div class="form-actions">
+                                        <button type="button" class="btn btn-outline preview-pdf" data-url="assets/samples/Attendance Register.pdf">Preview</button>
+                                        <a href="assets/samples/Attendance Register.pdf" download class="btn btn-outline">Download</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span>Curriculum Policy (PDF)</span>
+                                    <div class="form-actions">
+                                        <button type="button" class="btn btn-outline preview-pdf" data-url="assets/samples/Curriculum Policy.pdf">Preview</button>
+                                        <a href="assets/samples/Curriculum Policy.pdf" download class="btn btn-outline">Download</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span>School Improvement Plan (PDF)</span>
+                                    <div class="form-actions">
+                                        <button type="button" class="btn btn-outline preview-pdf" data-url="assets/samples/School Improvement Plan.pdf">Preview</button>
+                                        <a href="assets/samples/School Improvement Plan.pdf" download class="btn btn-outline">Download</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span>Student Progress Report (PDF)</span>
+                                    <div class="form-actions">
+                                        <button type="button" class="btn btn-outline preview-pdf" data-url="assets/samples/Student Progress Report.pdf">Preview</button>
+                                        <a href="assets/samples/Student Progress Report.pdf" download class="btn btn-outline">Download</a>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span>UAE School Plan 2025 (PDF)</span>
+                                    <div class="form-actions">
+                                        <button type="button" class="btn btn-outline preview-pdf" data-url="assets/samples/Uae School Plan 2025.pdf">Preview</button>
+                                        <a href="assets/samples/Uae School Plan 2025.pdf" download class="btn btn-outline">Download</a>
+                                    </div>
+                                </li>
                             </ul>
-                            <div class="about-separator"></div>
-                            <p class="about-footer">
-                                Developed by <strong>Techno Group Originator</strong> under the <strong>EAD</strong> project for advanced inspection capabilities.
-                            </p>
                         </div>
                     </div>
                 </aside>
@@ -453,6 +476,19 @@
         // Set current year
         document.getElementById('current-year').textContent = new Date().getFullYear();
     </script>
+    <div id="pdf-modal" class="modal" aria-hidden="true" style="display: none;">
+        <div class="modal-backdrop" data-modal-close></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pdf-modal-title">
+            <div class="modal-header">
+                <h3 id="pdf-modal-title" class="card-title">PDF Preview</h3>
+                <button type="button" id="pdf-modal-close" class="btn btn-outline">Close</button>
+            </div>
+            <div class="modal-body">
+                <iframe id="pdf-frame" class="pdf-frame" src="" title="PDF preview"></iframe>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="assets/js/main.js"></script>
 </body>
 </html> 

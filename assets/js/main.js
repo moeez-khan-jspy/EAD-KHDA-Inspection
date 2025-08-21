@@ -65,6 +65,7 @@ class KHDAInspectionApp {
         // Inspector Page State
         		const state = {
 			file: null,
+			files: [],
 			status: { message: "", type: null },
 			isBusy: false,
 			analysisText: "",
@@ -92,6 +93,17 @@ class KHDAInspectionApp {
         const analysisContainer = document.getElementById('analysis-container');
         const fileSelectedSpan = document.getElementById('file-selected');
         const agentRunner = document.getElementById('agent-runner');
+        const pdfModal = document.getElementById('pdf-modal');
+        const pdfFrame = document.getElementById('pdf-frame');
+        const pdfModalClose = document.getElementById('pdf-modal-close');
+
+        // Configure Markdown renderer if available
+        if (typeof window !== 'undefined' && window.marked && window.marked.setOptions) {
+            window.marked.setOptions({
+                gfm: true,
+                breaks: true
+            });
+        }
 
         // Ensure toast container exists
         let toastContainer = document.getElementById('toast-container');
@@ -151,7 +163,8 @@ class KHDAInspectionApp {
 
         const updateAnalysisDisplay = (text) => {
             if (text) {
-                analysisContainer.innerHTML = `<div class="analysis-content">${this.parseMarkdown(text)}</div>`;
+                const html = (typeof window !== 'undefined' && window.marked) ? window.marked.parse(text) : '';
+                analysisContainer.innerHTML = `<div class="analysis-content">${html}</div>`;
             } else {
                 analysisContainer.innerHTML = `
                     <p class="analysis-placeholder">
@@ -222,11 +235,51 @@ class KHDAInspectionApp {
 			if (state.agentInterval) { clearInterval(state.agentInterval); state.agentInterval = null; }
 		};
 
+        // PDF preview modal logic
+        const openPdfModal = (url) => {
+            if (!pdfModal || !pdfFrame) return;
+            pdfFrame.src = url;
+            pdfModal.style.display = 'block';
+            pdfModal.setAttribute('aria-hidden', 'false');
+        };
+        const closePdfModal = () => {
+            if (!pdfModal || !pdfFrame) return;
+            pdfFrame.src = '';
+            pdfModal.style.display = 'none';
+            pdfModal.setAttribute('aria-hidden', 'true');
+        };
+        if (pdfModalClose) {
+            pdfModalClose.addEventListener('click', closePdfModal);
+        }
+        document.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target && target.matches('[data-modal-close]')) {
+                closePdfModal();
+            }
+            if (target && target.matches('.preview-pdf')) {
+                const url = target.getAttribute('data-url');
+                if (url) openPdfModal(url);
+            }
+        });
+
         // File Input Handler
         if (fileInput) {
             fileInput.addEventListener('change', (e) => {
-                const file = e.target.files?.[0];
-                state.file = file || null;
+                const files = Array.from(e.target.files || []);
+                const allowed = ['application/pdf'];
+                const maxFiles = 5;
+
+                // Filter by type and count
+                const filtered = files.filter(f => {
+                    if (f.type.startsWith('image/')) return true;
+                    if (f.type.startsWith('audio/')) return true;
+                    if (f.type.startsWith('video/')) return true;
+                    if (allowed.includes(f.type)) return true;
+                    return false;
+                }).slice(0, maxFiles);
+
+                state.files = filtered;
+                state.file = filtered[0] || null;
                 
                 // Reset downstream state
                 state.analysisText = "";
@@ -237,8 +290,9 @@ class KHDAInspectionApp {
                 stopAgentRunner();
 
                 // Update UI
-                if (file) {
-                    fileSelectedSpan.textContent = `Selected: ${file.name}`;
+                if (filtered.length > 0) {
+                    const names = filtered.map(f => f.name).join(', ');
+                    fileSelectedSpan.textContent = `Selected (${filtered.length}/${maxFiles}): ${names}`;
                     fileSelectedSpan.style.display = 'inline';
                     analyzeBtn.style.display = 'inline-flex';
                     analyzeBtn.disabled = false;
@@ -257,8 +311,8 @@ class KHDAInspectionApp {
             analyzeForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
-                if (!state.file) {
-                    const msg = "Please select a file to analyze.";
+                if (!state.files || state.files.length === 0) {
+                    const msg = "Please select up to 5 files (PDF/images/audio/video) to analyze.";
                     showStatus(msg, "error");
                     showToast("There was a problem", msg, 'error');
                     return;
@@ -275,7 +329,10 @@ class KHDAInspectionApp {
 
                 try {
                     const formData = new FormData();
-                    formData.append("file", state.file);
+                    if (state.files.length === 1) {
+                        formData.append('file', state.files[0]);
+                    }
+                    state.files.forEach((f) => formData.append('files', f));
                     
                     const response = await fetch(ANALYSIS_URL, {
                         method: "POST",
@@ -288,7 +345,7 @@ class KHDAInspectionApp {
                         throw new Error(result?.detail || "Analysis failed. Please try again.");
                     }
 
-                    state.analysisText = result?.result || "";
+                    state.analysisText = result?.result || result?.analysis || "";
                     updateAnalysisDisplay(state.analysisText);
                     showStatus("", null);
                     
@@ -379,35 +436,7 @@ class KHDAInspectionApp {
         updateDownloadButton();
     }
 
-    // Simple Markdown Parser
-    parseMarkdown(text) {
-        return text
-            // Headers
-            .replace(/^### (.*$)/gim, '<h3>$1<\/h3>')
-            .replace(/^## (.*$)/gim, '<h2>$1<\/h2>')
-            .replace(/^# (.*$)/gim, '<h1>$1<\/h1>')
-            // Bold
-            .replace(/\*\*(.*)\*\*/gim, '<strong>$1<\/strong>')
-            // Italic
-            .replace(/\*(.*)\*/gim, '<em>$1<\/em>')
-            // Code blocks
-            .replace(/```([\s\S]*?)```/gim, '<pre><code>$1<\/code><\/pre>')
-            // Inline code
-            .replace(/`([^`]*)`/gim, '<code>$1<\/code>')
-            // Lists
-            .replace(/^\* (.*$)/gim, '<li>$1<\/li>')
-            .replace(/^- (.*$)/gim, '<li>$1<\/li>')
-            // Line breaks
-            .replace(/\n\n/gim, '<\/p><p>')
-            .replace(/\n/gim, '<br>')
-            // Wrap in paragraphs
-            .replace(/^(.*)$/gim, '<p>$1<\/p>')
-            // Clean up list items
-            .replace(/<p><li>/gim, '<ul><li>')
-            .replace(/<\/li><\/p>/gim, '<\/li><\/ul>')
-            // Clean up multiple paragraphs
-            .replace(/<\/p><p><\/p><p>/gim, '<\/p><p>');
-    }
+    // Removed manual Markdown parser; using marked.js exclusively
 
     // Workflow tabs and JSON prettifier
     setupWorkflowTabs() {
